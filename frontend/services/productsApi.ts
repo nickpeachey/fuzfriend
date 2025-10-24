@@ -1,0 +1,56 @@
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type {
+    Product,
+    ProductSearchRequest,
+    ProductSearchResponse,
+    FilterOptions,
+} from "../types/Product";
+
+export const productsApi = createApi({
+    reducerPath: "productsApi",
+    baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5155/api/" }),
+    endpoints: (builder) => ({
+        searchProducts: builder.mutation<ProductSearchResponse, ProductSearchRequest>({
+            query: (body) => ({
+                url: "Products/search",
+                method: "POST",
+                body,
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+            }),
+            transformResponse: (response: { products: Product[]; totalCount: number; filters?: FilterOptions }) => ({
+                items: response.products,
+                totalCount: response.totalCount,
+                filters: response.filters,
+            }),
+        }),
+        // The backend does not expose separate endpoints for categories/brands/colours/sizes.
+        // We fetch the default product listing (GET /api/Products) and map out filter options.
+        getCategories: builder.query<string[], void>({
+            query: () => ({ url: "Products", method: "GET" }),
+            transformResponse: (response: { filters?: FilterOptions }) => response.filters?.categories ?? [],
+        }),
+        getBrands: builder.query<string[], void>({
+            query: () => ({ url: "Products", method: "GET" }),
+            transformResponse: (response: { filters?: FilterOptions }) => response.filters?.brands ?? [],
+        }),
+        getColours: builder.query<string[], void>({
+            query: () => ({ url: "Products", method: "GET" }),
+            transformResponse: (response: { filters?: FilterOptions }) => response.filters?.colours ?? [],
+        }),
+        getSizes: builder.query<string[], void>({
+            query: () => ({ url: "Products", method: "GET" }),
+            transformResponse: (response: { filters?: FilterOptions }) => response.filters?.sizes ?? [],
+        }),
+    }),
+});
+
+export const {
+    useSearchProductsMutation,
+    useGetCategoriesQuery,
+    useGetBrandsQuery,
+    useGetColoursQuery,
+    useGetSizesQuery,
+} = productsApi;

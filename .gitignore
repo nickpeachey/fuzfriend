@@ -4,3 +4,12 @@
 
 ## Optional: common compiled artifacts
 **/*.dll
+
+## OS/editor cruft
+.DS_Store
+.idea/
+.vscode/
+
+## Next.js build output and node modules
+frontend/.next/
+**/node_modules/**
