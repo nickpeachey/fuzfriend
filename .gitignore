@@ -1,0 +1,6 @@
+## Ignore all .NET build output directories
+**/bin/**
+**/obj/**
+
+## Optional: common compiled artifacts
+**/*.dll
