@@ -134,3 +134,4 @@
 /Users/nickpeachey/Developer/projects/fuzfriend/backend/fuzfriend.ProductsApi/fuzfriend.ProductsApi/obj/Debug/net9.0/fuzfriend.ProductsApi.pdb
 /Users/nickpeachey/Developer/projects/fuzfriend/backend/fuzfriend.ProductsApi/fuzfriend.ProductsApi/obj/Debug/net9.0/fuzfriend.ProductsApi.genruntimeconfig.cache
 /Users/nickpeachey/Developer/projects/fuzfriend/backend/fuzfriend.ProductsApi/fuzfriend.ProductsApi/obj/Debug/net9.0/ref/fuzfriend.ProductsApi.dll
+/Users/nickpeachey/Developer/projects/fuzfriend/backend/fuzfriend.ProductsApi/fuzfriend.ProductsApi/obj/Debug/net9.0/fuzfriend.ProductsApi.sourcelink.json
