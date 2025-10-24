@@ -14,6 +14,7 @@ export interface Product {
 
 export interface ProductSearchRequest {
     query?: string;
+    ids?: number[];
     category?: string;
     categories?: string[];
     brands?: string[];

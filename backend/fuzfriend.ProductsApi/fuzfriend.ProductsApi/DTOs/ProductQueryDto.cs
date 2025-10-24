@@ -4,6 +4,8 @@ namespace fuzfriend.ProductsApi.DTOs;
 
 public class ProductQueryDto
 {
+    // Optional: filter by specific product IDs
+    public List<int>? Ids { get; set; }
     // Single category for backward compatibility
     public string? Category { get; set; }
     // New: support multiple categories

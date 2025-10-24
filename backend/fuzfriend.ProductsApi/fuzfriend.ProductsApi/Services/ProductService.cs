@@ -20,7 +20,7 @@ public class ProductService
         var page = query.Page <= 0 ? 1 : query.Page;
         var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 100);
 
-        var productsQuery = _context.Products.AsQueryable();
+    var productsQuery = _context.Products.AsQueryable();
 
         // Normalize incoming filters: treat empty/zero as not provided
         var category = string.IsNullOrWhiteSpace(query.Category) ? null : query.Category;
@@ -31,7 +31,8 @@ public class ProductService
         }
         categories = categories.Distinct().ToList();
 
-        var brands = query.Brands?.Where(b => !string.IsNullOrWhiteSpace(b)).Distinct().ToList();
+    var ids = query.Ids?.Distinct().ToList();
+    var brands = query.Brands?.Where(b => !string.IsNullOrWhiteSpace(b)).Distinct().ToList();
         var colours = query.Colours?.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
         var sizes = query.Sizes?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
 
@@ -47,7 +48,8 @@ public class ProductService
         bool? onPromotion = query.OnPromotion; // keep explicit bool, no special normalization
 
         // Determine if any filters were provided using normalized values
-        var noFilters = (categories == null || categories.Count == 0)
+    var noFilters = (ids == null || ids.Count == 0)
+            && (categories == null || categories.Count == 0)
                         && (brands == null || brands.Count == 0)
                         && (colours == null || colours.Count == 0)
                         && (sizes == null || sizes.Count == 0)
@@ -57,6 +59,8 @@ public class ProductService
                         && !onPromotion.HasValue;
 
         // Apply filters (only when provided)
+        if (ids?.Any() == true)
+            productsQuery = productsQuery.Where(p => ids.Contains(p.Id));
         if (categories?.Any() == true)
             productsQuery = productsQuery.Where(p => categories.Contains(p.Category));
         if (brands?.Any() == true)
@@ -141,5 +145,13 @@ public class ProductService
             Filters = availableFilters,
             TotalCount = totalCount
         };
+    }
+
+    public async Task<Models.Product?> GetProductByIdAsync(int id)
+    {
+        // Enforce exact key lookup and no tracking
+        return await _context.Products
+            .AsNoTracking()
+            .SingleOrDefaultAsync(p => p.Id == id);
     }
 }

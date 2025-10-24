@@ -10,6 +10,31 @@ export const productsApi = createApi({
     reducerPath: "productsApi",
     baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5155/api/" }),
     endpoints: (builder) => ({
+        getProductById: builder.query<Product, number>({
+            query: (id: number) => ({
+                url: `Products/${id}`,
+                method: "GET",
+                headers: { Accept: "application/json" },
+            }),
+        }),
+        getSuggestions: builder.query<Product[], { query: string; limit?: number }>({
+            query: ({ query, limit = 8 }) => ({
+                url: "Products/search",
+                method: "POST",
+                body: {
+                    query,
+                    page: 1,
+                    pageSize: limit,
+                    sortBy: "title",
+                    sortDirection: "asc",
+                },
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+            }),
+            transformResponse: (response: { products: Product[] }) => response.products ?? [],
+        }),
         searchProducts: builder.mutation<ProductSearchResponse, ProductSearchRequest>({
             query: (body) => ({
                 url: "Products/search",
@@ -61,6 +86,8 @@ export const productsApi = createApi({
 });
 
 export const {
+    useGetProductByIdQuery,
+    useGetSuggestionsQuery,
     useSearchProductsMutation,
     useGetCategoriesQuery,
     useGetBrandsQuery,

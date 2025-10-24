@@ -227,12 +227,12 @@ export default function ProductSearch() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
                         {isLoading && <p>Loading...</p>}
                         {data?.items.map((p: Product) => (
-                            <div key={p.id} className="rounded border p-2 hover:shadow">
+                            <a key={p.id} href={`/products/${p.id}`} className="block rounded border p-2 transition hover:shadow focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-700">
                                 <img src={p.imageUrl} alt={p.title} className="h-48 w-full rounded object-cover" />
-                                <h3 className="mt-2 font-semibold">{p.title}</h3>
-                                <p className="text-sm text-gray-500">{p.description}</p>
+                                <h3 className="mt-2 line-clamp-1 font-semibold" title={p.title}>{p.title}</h3>
+                                <p className="line-clamp-2 text-sm text-gray-500" title={p.description}>{p.description}</p>
                                 <p className="mt-1 font-bold text-blue-600">£{p.price}</p>
-                            </div>
+                            </a>
                         ))}
                     </div>
                     <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
