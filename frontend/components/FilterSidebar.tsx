@@ -182,8 +182,8 @@ export default function FilterSidebar({ value, onChange, filters, onApply, onRes
                                 onClick={() => toggle("colours", col)}
                                 style={{ backgroundColor: col }}
                                 className={`rounded border px-2 py-1 text-xs transition-colors ${selected
-                                        ? "ring-2 ring-zinc-900 dark:ring-zinc-100"
-                                        : ""
+                                    ? "ring-2 ring-zinc-900 dark:ring-zinc-100"
+                                    : ""
                                     } ${darkBg ? "border-zinc-800" : "border-zinc-300 dark:border-zinc-700"}`}
                                 title={col}
                             >
@@ -206,8 +206,8 @@ export default function FilterSidebar({ value, onChange, filters, onApply, onRes
                                 key={s}
                                 onClick={() => toggle("sizes", s)}
                                 className={`rounded border px-2 py-1 text-xs ${(value.sizes ?? []).includes(s)
-                                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-black"
-                                        : "border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+                                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-black"
+                                    : "border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
                                     }`}
                             >
                                 {label}

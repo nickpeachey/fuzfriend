@@ -114,10 +114,10 @@ export default function ProductSearch() {
     useEffect(() => {
         syncingFromUrl.current = true;
         // arrays: prefer 'categories' if present; else fallback to single 'category'
-    const categoriesFromMulti = parseArray("categories");
+        const categoriesFromMulti = parseArray("categories");
         const singleCategory = searchParams.get("category") ?? "";
         const categoriesEff = categoriesFromMulti.length ? categoriesFromMulti : (singleCategory ? [singleCategory] : []);
-    const queryEff = (searchParams.get("q") ?? "").trim();
+        const queryEff = (searchParams.get("q") ?? "").trim();
         const brandsEff = parseArray("brands");
         const coloursEff = parseArray("colours");
         const sizesEff = parseArray("sizes");
@@ -196,7 +196,7 @@ export default function ProductSearch() {
     }, [sidebarFilters]);
 
     const handleReset = () => {
-    // Clear local UI state
+        // Clear local UI state
         setSidebarFilters({
             categories: [],
             brands: [],
@@ -274,8 +274,8 @@ export default function ProductSearch() {
                                 <h3 className="mt-2 line-clamp-1 font-semibold" title={p.title}>{p.title}</h3>
                                 <p className="line-clamp-2 text-sm text-gray-500" title={p.description}>{p.description}</p>
                                 <div className="mt-2 flex items-center justify-between">
-                                  <p className="font-bold text-blue-600">£{p.price}</p>
-                                  <AddToCartButton id={p.id} size="sm" />
+                                    <p className="font-bold text-blue-600">£{p.price}</p>
+                                    <AddToCartButton id={p.id} size="sm" />
                                 </div>
                             </a>
                         ))}
@@ -304,11 +304,10 @@ export default function ProductSearch() {
                             const Button = ({ n }: { n: number }) => (
                                 <button
                                     key={n}
-                                    className={`rounded px-3 py-1 text-sm transition-colors ${
-                                        page === n
+                                    className={`rounded px-3 py-1 text-sm transition-colors ${page === n
                                             ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black"
                                             : "border border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                                    }`}
+                                        }`}
                                     onClick={() => { if (n !== page) { setPage(n); updateUrl({ page: n }); } }}
                                 >
                                     {n}
