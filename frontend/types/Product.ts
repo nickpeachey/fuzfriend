@@ -13,6 +13,7 @@ export interface Product {
 }
 
 export interface ProductSearchRequest {
+    query?: string;
     category?: string;
     categories?: string[];
     brands?: string[];

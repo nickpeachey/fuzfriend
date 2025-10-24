@@ -42,6 +42,22 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Distributed cache: InMemory for Testing, Redis otherwise
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+else
+{
+    var redisConfig = builder.Configuration.GetSection("Redis:Configuration").Value ?? "localhost:6379";
+    var redisInstance = builder.Configuration.GetSection("Redis:InstanceName").Value ?? "ProductsApi:";
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConfig;
+        options.InstanceName = redisInstance;
+    });
+}
+
 // Database connection: Use InMemory for Testing, PostgreSQL otherwise
 if (builder.Environment.IsEnvironment("Testing"))
 {

@@ -22,6 +22,9 @@ public class ProductQueryDto
     public string? SortBy { get; set; }
     // asc or desc
     public string? SortDirection { get; set; }
+
+    // New: free-text search across title, description, brand, category
+    public string? Query { get; set; }
 }
 
 public class FilterOptions

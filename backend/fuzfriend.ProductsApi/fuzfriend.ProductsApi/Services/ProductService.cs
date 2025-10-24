@@ -35,7 +35,7 @@ public class ProductService
         var colours = query.Colours?.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
         var sizes = query.Sizes?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
 
-        decimal? minPrice = query.MinPrice.HasValue && query.MinPrice.Value > 0 ? query.MinPrice.Value : null;
+    decimal? minPrice = query.MinPrice.HasValue && query.MinPrice.Value > 0 ? query.MinPrice.Value : null;
         decimal? maxPrice = query.MaxPrice.HasValue && query.MaxPrice.Value > 0 ? query.MaxPrice.Value : null;
         if (minPrice.HasValue && maxPrice.HasValue && maxPrice < minPrice)
         {
@@ -65,6 +65,17 @@ public class ProductService
             productsQuery = productsQuery.Where(p => colours.Contains(p.Color));
         if (sizes?.Any() == true)
             productsQuery = productsQuery.Where(p => sizes.Contains(p.Size));
+        // Free-text search
+        if (!string.IsNullOrWhiteSpace(query.Query))
+        {
+            var q = query.Query.Trim().ToLower();
+            productsQuery = productsQuery.Where(p =>
+                p.Title.ToLower().Contains(q) ||
+                p.Description.ToLower().Contains(q) ||
+                p.Brand.ToLower().Contains(q) ||
+                p.Category.ToLower().Contains(q)
+            );
+        }
         if (minPrice.HasValue)
             productsQuery = productsQuery.Where(p => p.Price >= minPrice.Value);
         if (maxPrice.HasValue)
