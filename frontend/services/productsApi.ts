@@ -6,16 +6,69 @@ import type {
     FilterOptions,
 } from "../types/Product";
 
+const rawBaseQuery = fetchBaseQuery({ baseUrl: "http://localhost:5155/api/" });
+
 export const productsApi = createApi({
     reducerPath: "productsApi",
-    baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5155/api/" }),
+    baseQuery: rawBaseQuery,
     endpoints: (builder) => ({
-        getProductById: builder.query<Product, number>({
-            query: (id: number) => ({
-                url: `Products/${id}`,
-                method: "GET",
-                headers: { Accept: "application/json" },
-            }),
+        // Strict product-by-id that bypasses API cache and corrects mismatches via ids[] search
+        getProductByIdStrict: builder.query<Product, number | string>({
+            async queryFn(arg, api, extraOptions, baseQuery) {
+                const idStr = String(arg);
+                const isNumeric = /^\d+$/.test(idStr);
+                const commonHeaders: Record<string, string> = {
+                    Accept: "application/json",
+                    "Cache-Control": "no-cache",
+                    Pragma: "no-cache",
+                    "X-Bypass-Cache": "1",
+                };
+
+                // Numeric ID: GET by id first
+                if (isNumeric) {
+                    const first = await rawBaseQuery(
+                        { url: `Products/${idStr}`, method: "GET", headers: commonHeaders },
+                        api,
+                        extraOptions
+                    );
+                    if (first.error) return { error: first.error as any };
+                    const prod = first.data as Product;
+                    if (!prod) return { error: { status: 404, data: "Not Found" } as any };
+                    if (String(prod.id) === idStr) return { data: prod };
+
+                    // Strict fallback: search by ids[]
+                    const strict = await rawBaseQuery(
+                        {
+                            url: `Products/search`,
+                            method: "POST",
+                            headers: { ...commonHeaders, "Content-Type": "application/json" },
+                            body: { ids: [Number(idStr)], page: 1, pageSize: 1 },
+                        },
+                        api,
+                        extraOptions
+                    );
+                    if (strict.error) return { data: prod };
+                    const sdata = strict.data as { products?: Product[]; Products?: Product[] };
+                    const items = (sdata?.products ?? sdata?.Products) || [];
+                    return { data: items[0] ?? prod };
+                }
+
+                // Non-numeric: treat as slug-like, search by query
+                const search = await rawBaseQuery(
+                    {
+                        url: `Products/search`,
+                        method: "POST",
+                        headers: { ...commonHeaders, "Content-Type": "application/json" },
+                        body: { query: idStr, page: 1, pageSize: 1 },
+                    },
+                    api,
+                    extraOptions
+                );
+                if (search.error) return { error: search.error as any };
+                const data = search.data as { products?: Product[]; Products?: Product[] };
+                const items = (data?.products ?? data?.Products) || [];
+                return items.length ? { data: items[0] } : { error: { status: 404, data: "Not Found" } as any };
+            },
         }),
         getSuggestions: builder.query<Product[], { query: string; limit?: number }>({
             query: ({ query, limit = 8 }) => ({
@@ -86,7 +139,7 @@ export const productsApi = createApi({
 });
 
 export const {
-    useGetProductByIdQuery,
+    useGetProductByIdStrictQuery,
     useGetSuggestionsQuery,
     useSearchProductsMutation,
     useGetCategoriesQuery,

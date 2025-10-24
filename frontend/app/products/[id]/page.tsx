@@ -1,5 +1,5 @@
 import React from "react";
-import type { Product } from "@/types/Product";
+import { getProductByIdStrictServer } from "@/store/lib/serverApi";
 import { notFound } from "next/navigation";
 
 // Ensure this page is always rendered dynamically with no caching between IDs
@@ -7,89 +7,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-function normalizeApiBase(): string {
-  const raw = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5155/api";
-  const trimmed = raw.replace(/\/+$/, "");
-  if (/\/api$/.test(trimmed)) return trimmed;
-  return `${trimmed}/api`;
-}
-
-type ProductWithDebug = { product: Product | null; debug: { requestedId: string; returnedId?: string | null; cacheStatus?: string | null; serverStrictFix?: string | null } };
-
-async function fetchProduct(id: string): Promise<ProductWithDebug> {
-  const base = normalizeApiBase();
-  try {
-    if (!id || !String(id).trim()) {
-      return { product: null, debug: { requestedId: String(id ?? ""), returnedId: null, cacheStatus: null, serverStrictFix: null } };
-    }
-    const isNumeric = /^\d+$/.test(id);
-    // Prefer fresh data for product detail to avoid wrong caching across IDs.
-    // Add a tiny timestamp to fully bust any intermediate caches.
-    const ts = Date.now();
-    if (isNumeric) {
-      const res = await fetch(`${base}/Products/${id}?_ts=${ts}`, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        "X-Bypass-Cache": "1",
-      },
-    });
-      if (res.ok) {
-        const cacheStatus = res.headers.get("x-cache-status");
-        const returnedIdHeader = res.headers.get("x-returned-id");
-        const requestedIdHeader = res.headers.get("x-requested-id");
-        const strictFix = res.headers.get("x-server-strict-fix");
-        const prod: Product = await res.json();
-        // If backend returns a different product id (shouldn't happen), try strict search by ids[]
-        if (String(prod.id) !== String(id)) {
-          const strict = await fetch(`${base}/Products/search`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              "Cache-Control": "no-cache",
-              Pragma: "no-cache",
-              "X-Bypass-Cache": "1",
-            },
-            body: JSON.stringify({ ids: [Number(id)], page: 1, pageSize: 1 }),
-            cache: "no-store",
-          });
-          if (strict.ok) {
-            const sdata = await strict.json();
-            const items: Product[] | undefined = sdata?.products ?? sdata?.Products ?? [];
-            if (items && items.length) return { product: items[0], debug: { requestedId: id, returnedId: String(items[0].id), cacheStatus, serverStrictFix: strictFix } };
-          }
-        }
-        return { product: prod, debug: { requestedId: id, returnedId: returnedIdHeader ?? String(prod.id), cacheStatus, serverStrictFix: strictFix } };
-      }
-    }
-    // Fallback: when id is non-numeric, try searching by the id as a query (slug-like)
-    if (!isNumeric) {
-      const search = await fetch(`${base}/Products/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-          "X-Bypass-Cache": "1",
-        },
-        body: JSON.stringify({ query: String(id), page: 1, pageSize: 1 }),
-        cache: "no-store",
-      });
-  if (!search.ok) return { product: null, debug: { requestedId: id, returnedId: null, cacheStatus: null, serverStrictFix: null } };
-      const data = await search.json();
-      const items: Product[] | undefined = data?.products ?? data?.Products ?? [];
-      const item = items && items.length ? items[0] : null;
-      return { product: item, debug: { requestedId: id, returnedId: item ? String(item.id) : null, cacheStatus: null, serverStrictFix: null } };
-    }
-    return { product: null, debug: { requestedId: id, returnedId: null, cacheStatus: null, serverStrictFix: null } };
-  } catch {
-    return { product: null, debug: { requestedId: id, returnedId: null, cacheStatus: null, serverStrictFix: null } };
-  }
-}
 
 export default async function ProductPage({ params, searchParams }: { params: Promise<{ id?: string }>, searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> }) {
   const p = await params;
@@ -100,7 +17,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   if (!requestedId || !String(requestedId).trim()) {
     return notFound();
   }
-  const { product, debug } = await fetchProduct(requestedId);
+  const product = await getProductByIdStrictServer(requestedId);
   if (!product) return notFound();
 
   const images = (product as any).imageUrls as string[] | undefined; // backend property casing is ImageUrls
@@ -127,10 +44,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         </div>
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{product.title}</h1>
-          <div className="mt-1 text-xs text-zinc-400">Requested ID: {debug.requestedId || "(none)"} • Product ID: {debug.returnedId ?? product.id}</div>
-          {debug.cacheStatus && (
-            <div className="mt-1 text-[10px] text-zinc-400">Cache: {debug.cacheStatus}{debug.serverStrictFix ? ` • StrictFix: ${debug.serverStrictFix}` : ""}</div>
-          )}
+          <div className="mt-1 text-xs text-zinc-400">Requested ID: {requestedId} • Product ID: {product.id}</div>
           <div className="mt-2 text-sm text-zinc-500">{product.brand} • {product.category}</div>
           <div className="mt-4 text-2xl font-semibold text-blue-600">£{product.price}</div>
           <div className="mt-4 text-sm text-zinc-700 dark:text-zinc-300">{product.description}</div>
