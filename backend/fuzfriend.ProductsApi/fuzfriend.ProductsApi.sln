@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# 
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fuzfriend.ProductsApi", "fuzfriend.ProductsApi\fuzfriend.ProductsApi.csproj", "{55DE3CBA-73E0-4E65-AB95-074E3315ED31}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E0181274-CE6D-4019-9137-746139F06E99}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fuzfriend.ProductsApi.Tests", "fuzfriend.ProductsApi.Tests\fuzfriend.ProductsApi.Tests.csproj", "{F84472C8-8E0C-44D9-BBB7-3299A0FEED23}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{55DE3CBA-73E0-4E65-AB95-074E3315ED31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55DE3CBA-73E0-4E65-AB95-074E3315ED31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55DE3CBA-73E0-4E65-AB95-074E3315ED31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55DE3CBA-73E0-4E65-AB95-074E3315ED31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F84472C8-8E0C-44D9-BBB7-3299A0FEED23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F84472C8-8E0C-44D9-BBB7-3299A0FEED23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F84472C8-8E0C-44D9-BBB7-3299A0FEED23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F84472C8-8E0C-44D9-BBB7-3299A0FEED23}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
