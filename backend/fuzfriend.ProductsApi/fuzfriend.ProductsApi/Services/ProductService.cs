@@ -20,7 +20,7 @@ public class ProductService
         var page = query.Page <= 0 ? 1 : query.Page;
         var pageSize = query.PageSize <= 0 ? 20 : Math.Min(query.PageSize, 100);
 
-    var productsQuery = _context.Products.AsQueryable();
+        var productsQuery = _context.Products.AsQueryable();
 
         // Normalize incoming filters: treat empty/zero as not provided
         var category = string.IsNullOrWhiteSpace(query.Category) ? null : query.Category;
@@ -31,12 +31,12 @@ public class ProductService
         }
         categories = categories.Distinct().ToList();
 
-    var ids = query.Ids?.Distinct().ToList();
-    var brands = query.Brands?.Where(b => !string.IsNullOrWhiteSpace(b)).Distinct().ToList();
+        var ids = query.Ids?.Distinct().ToList();
+        var brands = query.Brands?.Where(b => !string.IsNullOrWhiteSpace(b)).Distinct().ToList();
         var colours = query.Colours?.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
         var sizes = query.Sizes?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
 
-    decimal? minPrice = query.MinPrice.HasValue && query.MinPrice.Value > 0 ? query.MinPrice.Value : null;
+        decimal? minPrice = query.MinPrice.HasValue && query.MinPrice.Value > 0 ? query.MinPrice.Value : null;
         decimal? maxPrice = query.MaxPrice.HasValue && query.MaxPrice.Value > 0 ? query.MaxPrice.Value : null;
         if (minPrice.HasValue && maxPrice.HasValue && maxPrice < minPrice)
         {
@@ -48,15 +48,15 @@ public class ProductService
         bool? onPromotion = query.OnPromotion; // keep explicit bool, no special normalization
 
         // Determine if any filters were provided using normalized values
-    var noFilters = (ids == null || ids.Count == 0)
-            && (categories == null || categories.Count == 0)
-                        && (brands == null || brands.Count == 0)
-                        && (colours == null || colours.Count == 0)
-                        && (sizes == null || sizes.Count == 0)
-                        && !minPrice.HasValue
-                        && !maxPrice.HasValue
-                        && !minRating.HasValue
-                        && !onPromotion.HasValue;
+        var noFilters = (ids == null || ids.Count == 0)
+                && (categories == null || categories.Count == 0)
+                            && (brands == null || brands.Count == 0)
+                            && (colours == null || colours.Count == 0)
+                            && (sizes == null || sizes.Count == 0)
+                            && !minPrice.HasValue
+                            && !maxPrice.HasValue
+                            && !minRating.HasValue
+                            && !onPromotion.HasValue;
 
         // Apply filters (only when provided)
         if (ids?.Any() == true)
@@ -113,37 +113,68 @@ public class ProductService
             .Take(pageSize)
             .ToListAsync();
 
-        // Available filters based on the current result set
-        var filterSource = await baseQuery
-            .Select(p => new
+        // Faceted counts with self-facet exclusion: compute each facet's counts by applying all filters
+        // except the facet itself, so users can multi-select within a facet.
+        IQueryable<Models.Product> ApplyCommonFilters(IQueryable<Models.Product> q, bool includeCategories, bool includeBrands, bool includeColours, bool includeSizes)
+        {
+            if (ids?.Any() == true) q = q.Where(p => ids.Contains(p.Id));
+            if (!string.IsNullOrWhiteSpace(query.Query))
             {
-                p.Category,
-                p.Brand,
-                p.Color,
-                p.Size,
-                p.Price,
-                p.Rating,
-                p.OnPromotion
-            })
-            .ToListAsync();
+                var qtext = query.Query.Trim().ToLower();
+                q = q.Where(p => p.Title.ToLower().Contains(qtext) || p.Description.ToLower().Contains(qtext) || p.Brand.ToLower().Contains(qtext) || p.Category.ToLower().Contains(qtext));
+            }
+            if (minPrice.HasValue) q = q.Where(p => p.Price >= minPrice.Value);
+            if (maxPrice.HasValue) q = q.Where(p => p.Price <= maxPrice.Value);
+            if (minRating.HasValue) q = q.Where(p => p.Rating >= minRating.Value);
+            if (onPromotion.HasValue) q = q.Where(p => p.OnPromotion == onPromotion.Value);
+            if (includeCategories && categories?.Any() == true) q = q.Where(p => categories.Contains(p.Category));
+            if (includeBrands && brands?.Any() == true) q = q.Where(p => brands.Contains(p.Brand));
+            if (includeColours && colours?.Any() == true) q = q.Where(p => colours.Contains(p.Color));
+            if (includeSizes && sizes?.Any() == true) q = q.Where(p => sizes.Contains(p.Size));
+            return q;
+        }
+
+        var forCategories = ApplyCommonFilters(_context.Products.AsNoTracking(), includeCategories: false, includeBrands: true, includeColours: true, includeSizes: true);
+        var forBrands = ApplyCommonFilters(_context.Products.AsNoTracking(), includeCategories: true, includeBrands: false, includeColours: true, includeSizes: true);
+        var forColours = ApplyCommonFilters(_context.Products.AsNoTracking(), includeCategories: true, includeBrands: true, includeColours: false, includeSizes: true);
+        var forSizes = ApplyCommonFilters(_context.Products.AsNoTracking(), includeCategories: true, includeBrands: true, includeColours: true, includeSizes: false);
+
+        var categoryCounts = await forCategories.GroupBy(p => p.Category).Select(g => new { Key = g.Key, Count = g.Count() }).ToListAsync();
+        var brandCounts = await forBrands.GroupBy(p => p.Brand).Select(g => new { Key = g.Key, Count = g.Count() }).ToListAsync();
+        var colourCounts = await forColours.GroupBy(p => p.Color).Select(g => new { Key = g.Key, Count = g.Count() }).ToListAsync();
+        var sizeCounts = await forSizes.GroupBy(p => p.Size).Select(g => new { Key = g.Key, Count = g.Count() }).ToListAsync();
+
+        decimal priceMin = 0;
+        decimal priceMax = 0;
+        if (await baseQuery.AnyAsync())
+        {
+            priceMin = await baseQuery.MinAsync(p => p.Price);
+            priceMax = await baseQuery.MaxAsync(p => p.Price);
+        }
+        var ratings = await baseQuery.Select(p => (int)Math.Floor(p.Rating)).Distinct().OrderBy(r => r).ToListAsync();
+        var hasPromos = await baseQuery.AnyAsync(p => p.OnPromotion);
 
         var availableFilters = new FilterOptions
         {
-            Categories = filterSource.Select(p => p.Category).Distinct().ToList(),
-            Brands = filterSource.Select(p => p.Brand).Distinct().ToList(),
-            Colours = filterSource.Select(p => p.Color).Distinct().ToList(),
-            Sizes = filterSource.Select(p => p.Size).Distinct().ToList(),
-            MinPrice = filterSource.Any() ? filterSource.Min(p => p.Price) : 0,
-            MaxPrice = filterSource.Any() ? filterSource.Max(p => p.Price) : 0,
-            Ratings = filterSource.Select(p => (int)Math.Floor(p.Rating)).Distinct().OrderBy(r => r).ToList(),
-            HasPromotions = filterSource.Any(p => p.OnPromotion)
+            Categories = categoryCounts.Where(x => x.Key != null && x.Count > 0).Select(x => x.Key!).Distinct().ToList(),
+            Brands = brandCounts.Where(x => x.Key != null && x.Count > 0).Select(x => x.Key!).Distinct().ToList(),
+            Colours = colourCounts.Where(x => x.Key != null && x.Count > 0).Select(x => x.Key!).Distinct().ToList(),
+            Sizes = sizeCounts.Where(x => x.Key != null && x.Count > 0).Select(x => x.Key!).Distinct().ToList(),
+            CategoryCounts = categoryCounts.Where(x => x.Key != null).ToDictionary(x => x.Key!, x => x.Count),
+            BrandCounts = brandCounts.Where(x => x.Key != null).ToDictionary(x => x.Key!, x => x.Count),
+            ColourCounts = colourCounts.Where(x => x.Key != null).ToDictionary(x => x.Key!, x => x.Count),
+            SizeCounts = sizeCounts.Where(x => x.Key != null).ToDictionary(x => x.Key!, x => x.Count),
+            MinPrice = priceMin,
+            MaxPrice = priceMax,
+            Ratings = ratings,
+            HasPromotions = hasPromos
         };
 
         return new ProductResponse
         {
             Products = products,
-            Filters = availableFilters,
-            TotalCount = totalCount
+            TotalCount = totalCount,
+            Filters = availableFilters
         };
     }
 

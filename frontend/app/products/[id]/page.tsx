@@ -1,5 +1,6 @@
 import React from "react";
 import { getProductByIdStrictServer } from "@/store/lib/serverApi";
+import AddToCartButton from "@/components/AddToCartButton";
 import { notFound } from "next/navigation";
 
 // Ensure this page is always rendered dynamically with no caching between IDs
@@ -54,7 +55,8 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
             <span className="rounded bg-zinc-100 px-2 py-1 dark:bg-zinc-800">Rating: {product.rating}</span>
           </div>
           <div className="mt-8 flex gap-2">
-            <button className="rounded bg-zinc-900 px-4 py-2 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200">Add to cart</button>
+            {/* Client add-to-cart button */}
+            <AddToCartButton id={Number(product.id)} />
             <button className="rounded border border-zinc-300 px-4 py-2 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">Add to wishlist</button>
           </div>
         </div>

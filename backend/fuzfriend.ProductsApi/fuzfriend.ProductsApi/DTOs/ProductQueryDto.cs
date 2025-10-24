@@ -35,6 +35,11 @@ public class FilterOptions
     public List<string> Brands { get; set; } = new();
     public List<string> Colours { get; set; } = new();
     public List<string> Sizes { get; set; } = new();
+    // New: facet counts for filters
+    public Dictionary<string, int> CategoryCounts { get; set; } = new();
+    public Dictionary<string, int> BrandCounts { get; set; } = new();
+    public Dictionary<string, int> ColourCounts { get; set; } = new();
+    public Dictionary<string, int> SizeCounts { get; set; } = new();
     public decimal MinPrice { get; set; }
     public decimal MaxPrice { get; set; }
     public List<int> Ratings { get; set; } = new();

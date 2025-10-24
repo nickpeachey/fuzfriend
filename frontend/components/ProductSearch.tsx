@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
     useSearchProductsMutation,
@@ -8,6 +8,7 @@ import {
 import { Product, ProductSearchRequest } from "../types/Product";
 import FilterSidebar from "./FilterSidebar";
 import { useGetFiltersQuery } from "../services/productsApi";
+import AddToCartButton from "./AddToCartButton";
 
 export default function ProductSearch() {
     // Start with no selected filters so initial request returns all products
@@ -20,11 +21,14 @@ export default function ProductSearch() {
         maxPrice: 0,
         onPromotion: false,
     });
+    const latestFiltersRef = useRef(sidebarFilters);
+    useEffect(() => { latestFiltersRef.current = sidebarFilters; }, [sidebarFilters]);
     const searchParams = useSearchParams();
     const [searchProducts, { data, isLoading }] = useSearchProductsMutation();
     const { data: availableFilters } = useGetFiltersQuery();
     const router = useRouter();
     const pathname = usePathname();
+    const syncingFromUrl = useRef(false);
 
     // Paging & sorting state
     const [page, setPage] = useState(1);
@@ -42,18 +46,22 @@ export default function ProductSearch() {
         return v.split(",").map((s) => s.trim()).filter(Boolean);
     };
 
-    // Build URL params from current state (or overrides) and update URL
-    const updateUrl = (overrides?: Partial<ProductSearchRequest>) => {
+    // Track last applied query string to avoid redundant router.replace loops
+    const lastQsRef = useRef<string | null>(null);
+
+    // Build URL params from current state (or overrides). Returns the planned href and qs.
+    const buildHref = (overrides?: Partial<ProductSearchRequest>, stateOverride?: typeof sidebarFilters) => {
         const params = new URLSearchParams();
+        const s = stateOverride ?? latestFiltersRef.current;
         const eff = {
             query: undefined as string | undefined,
-            categories: sidebarFilters.categories,
-            brands: sidebarFilters.brands,
-            colours: sidebarFilters.colours,
-            sizes: sidebarFilters.sizes,
-            minPrice: sidebarFilters.minPrice,
-            maxPrice: sidebarFilters.maxPrice,
-            onPromotion: sidebarFilters.onPromotion ? true : undefined,
+            categories: s.categories,
+            brands: s.brands,
+            colours: s.colours,
+            sizes: s.sizes,
+            minPrice: s.minPrice,
+            maxPrice: s.maxPrice,
+            onPromotion: s.onPromotion ? true : undefined,
             page,
             pageSize,
             sortBy,
@@ -76,11 +84,35 @@ export default function ProductSearch() {
 
         const qs = params.toString();
         const href = qs ? `${pathname}?${qs}` : pathname;
+        return { href, qs };
+    };
+
+    // Replace URL only if query string actually changes
+    const updateUrl = (overrides?: Partial<ProductSearchRequest>) => {
+        const { href, qs } = buildHref(overrides);
+        // Compare with last applied; if same, skip replace
+        if (lastQsRef.current === qs) return;
         router.replace(href);
+        lastQsRef.current = qs;
+    };
+
+    // Immediate apply for discrete toggles: update state and URL in one go using the updater
+    const applyImmediate = (updater: (prev: typeof sidebarFilters) => typeof sidebarFilters) => {
+        // Compute next state from latest, then update the latest ref immediately to avoid stale state on rapid clicks
+        const nextState = updater(latestFiltersRef.current);
+        latestFiltersRef.current = nextState;
+        setSidebarFilters(nextState);
+        if (page !== 1) setPage(1);
+        const { href, qs } = buildHref({ page: 1 }, nextState);
+        if (lastQsRef.current !== qs) {
+            router.replace(href);
+            lastQsRef.current = qs;
+        }
     };
 
     // React to URL changes: parse state and run search accordingly
     useEffect(() => {
+        syncingFromUrl.current = true;
         // arrays: prefer 'categories' if present; else fallback to single 'category'
     const categoriesFromMulti = parseArray("categories");
         const singleCategory = searchParams.get("category") ?? "";
@@ -130,6 +162,11 @@ export default function ProductSearch() {
             sortBy: sortByEff,
             sortDirection: sortDirectionEff,
         });
+        // Update the last applied qs to the current URL to prevent redundant replaces
+        lastQsRef.current = searchParams.toString();
+        // Allow a tick before enabling auto-apply reactions to avoid loops
+        const t = setTimeout(() => { syncingFromUrl.current = false; }, 0);
+        return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
@@ -147,11 +184,16 @@ export default function ProductSearch() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [availableFilters?.minPrice, availableFilters?.maxPrice]);
 
-    const handleSearch = () => {
-        // Apply current sidebar filters to URL and reset to first page
-        setPage(1);
-        updateUrl({ page: 1 });
-    };
+    // Auto-apply: whenever sidebar filters change via user interaction, update URL (debounced) and reset to page 1
+    useEffect(() => {
+        if (syncingFromUrl.current) return;
+        const t = setTimeout(() => {
+            if (page !== 1) setPage(1);
+            updateUrl({ page: 1 });
+        }, 250);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sidebarFilters]);
 
     const handleReset = () => {
     // Clear local UI state
@@ -179,8 +221,8 @@ export default function ProductSearch() {
                     <FilterSidebar
                         value={sidebarFilters}
                         onChange={setSidebarFilters}
+                        onChangeImmediate={applyImmediate}
                         filters={data?.filters || availableFilters}
-                        onApply={handleSearch}
                         onReset={handleReset}
                     />
                 </div>
@@ -231,7 +273,10 @@ export default function ProductSearch() {
                                 <img src={p.imageUrl} alt={p.title} className="h-48 w-full rounded object-cover" />
                                 <h3 className="mt-2 line-clamp-1 font-semibold" title={p.title}>{p.title}</h3>
                                 <p className="line-clamp-2 text-sm text-gray-500" title={p.description}>{p.description}</p>
-                                <p className="mt-1 font-bold text-blue-600">£{p.price}</p>
+                                <div className="mt-2 flex items-center justify-between">
+                                  <p className="font-bold text-blue-600">£{p.price}</p>
+                                  <AddToCartButton id={p.id} size="sm" />
+                                </div>
                             </a>
                         ))}
                     </div>

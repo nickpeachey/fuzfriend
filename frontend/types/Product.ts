@@ -35,6 +35,11 @@ export interface FilterOptions {
     brands: string[];
     colours: string[];
     sizes: string[];
+    // Facet counts keyed by value
+    categoryCounts?: Record<string, number>;
+    brandCounts?: Record<string, number>;
+    colourCounts?: Record<string, number>;
+    sizeCounts?: Record<string, number>;
     minPrice: number;
     maxPrice: number;
     ratings: number[];
