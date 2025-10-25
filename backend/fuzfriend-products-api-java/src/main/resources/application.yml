@@ -1,0 +1,51 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: fuzfriend-products-api-java
+  datasource:
+    url: jdbc:postgresql://localhost:5432/EcommerceDb
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        format_sql: false
+    open-in-view: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+cors:
+  allowed-origins: ["http://localhost:3000"]
+
+app:
+  cache:
+    ttl-seconds: 120
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        show_sql: false
+  data:
+    redis:
+      # Disable redis in tests by omitting host
+      host: ""

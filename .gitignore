@@ -10,6 +10,8 @@
 .idea/
 .vscode/
 
+*.class
+
 ## Next.js build output and node modules
 frontend/.next/
 **/node_modules/**
